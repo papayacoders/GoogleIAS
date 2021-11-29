@@ -1,5 +1,6 @@
 package `in`.papaya.googleias
 
+import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
@@ -13,12 +14,24 @@ class MainActivity : AppCompatActivity(), BillingProcessor.IBillingHandler {
 
     private lateinit var bp: BillingProcessor
     private lateinit var purchaseInfo: PurchaseInfo
+    private lateinit var preferences: SharedPreferences
+    private lateinit var editor: SharedPreferences.Editor
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         buyNow = findViewById(R.id.buyNow)
+
+        preferences = getSharedPreferences("subs", MODE_PRIVATE)
+        editor = preferences.edit()
+
+        if (!preferences.getBoolean("isPremium", false)){
+            Toast.makeText(this, "Show ads", Toast.LENGTH_SHORT).show()
+        }else{
+            Toast.makeText(this, "don't show ads", Toast.LENGTH_SHORT).show()
+        }
+
 
         bp = BillingProcessor(
             this,
@@ -33,6 +46,8 @@ class MainActivity : AppCompatActivity(), BillingProcessor.IBillingHandler {
     }
 
     override fun onProductPurchased(productId: String, details: PurchaseInfo?) {
+        editor.putBoolean("isPremium", true)
+        editor.apply()
         Toast.makeText(this, "Successfull", Toast.LENGTH_SHORT).show()
     }
 
@@ -65,15 +80,26 @@ class MainActivity : AppCompatActivity(), BillingProcessor.IBillingHandler {
 
             if (purchaseInfo != null) {
                 if (purchaseInfo.purchaseData.autoRenewing) {
+                    editor.putBoolean("isPremium", true)
+                    editor.apply()
                     Toast.makeText(this, "Already subscribe", Toast.LENGTH_SHORT).show()
-                } else Toast.makeText(this, "Not subscribed", Toast.LENGTH_SHORT).show()
-            } else Toast.makeText(this, "Expired", Toast.LENGTH_SHORT).show()
+                } else {
+                    editor.putBoolean("isPremium", false)
+                    editor.apply()
+                    Toast.makeText(this, "Not subscribed", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+
+                editor.putBoolean("isPremium", false)
+                editor.apply()
+                Toast.makeText(this, "Expired", Toast.LENGTH_SHORT).show()
+            }
         }
 
     }
 
     override fun onDestroy() {
-        if (bp != null){
+        if (bp != null) {
             bp.release()
         }
         super.onDestroy()
